@@ -10,6 +10,7 @@ knitr::opts_chunk$set(fig.width = 10, fig.height = 6)
 library(tidyverse)
 library(janitor)
 library(ggplot2)
+library(kableExtra)
 
 ```
 
@@ -33,6 +34,26 @@ Several groups are not covered by the above resources.
 
 All population estimates were taken as a single baseline, under the assumption that the overall fraction of the country made up of each group changed little in this 10-year tracking period. This is a BAD ASSUMPTION for some groups, but the population data I have access to don't support a higher-resolution analysis. I've tried to help correct for changing population by focusing not on per-capita rates of hate crimes but on the relative risk of crime compared to the risk experienced by the population at large. This statistic is unaffected by changes in population if all groups change in population in similar ways. 
 
+In this framing, relative risk is calculated on an annual basis as how much *more or less likely* a person is to experience a hate crime based on belonging to one of the target groups tracked by the FBI, relative to the overall population. For example, if a group makes up 2\% of the population but 10\% of hate crimes, members of that group are 5 times as likely to experience hate as the average person. 
+
+It's important also to keep in mind that people can be members of multiple groups at once. The FBI tracks hate against racial and ethnic groups, religions, gender identity and sexual orientation.
+
+There are some groups tracked by the FBI which I was not able to find good population statistics for and which I didn't include here. These are:
+
+- "Anti-Other Race/Ethnicity/Ancestry"
+- "Anti-Multiple Races, Group"
+- "Anti-Mental Disability"
+- "Multiple Bias"
+- "Anti-Other Religion"
+- "Anti-Physical Disability"
+- "Anti-Multiple Religions, Group"
+- "Anti-Other Christian"
+- "Anti-Bisexual"
+- "Anti-Gender Non-Conforming"
+
+For some of these groups, like the physically and mentally disabled, I specifically did not attempt to include estimates because definitions of disability can vary widely and I am not an expert in those areas. I don't want to spread misinformation regarding risk of hate based on my own inability to judge how many people 'should' be included in the overall population. 
+
+I also have less confidence in my estimates for populations of people based on gender identity and sexual orientation. These data are not tracked by the US Census, and many categories have experienced large fluctuations in recent decades not just based on changes in the actual way people experience gender and sexuality, but because of changing ideas about what these words themselves mean, changes in the level of comfort people have being out, increased visibility and representation of LGBTQ people, etc. As an example of this, the results below show a steady increase since 2012 of violence against trans people. I think this is likely a) an undercount of actual violence experienced by trans people and b) an artifact of evolving ideas across police departments in the country on what actually constitutes hate, and an increased understanding that anti-trans violence is an actual issue, and c) resultant from ongoing changes in how trans people think about their own identity.
 
 
 ``` {r, echo=FALSE, message=FALSE, results='hide'}
@@ -96,7 +117,7 @@ all_data <- all_data %>%
   mutate(relative_risk_rate = crime_fraction / (population / overall_population)) %>%
   mutate(key = substr(key,6,length(key)))
 
-ggplot(all_data %>% filter(key %in% c("Black or African American", "White", "Asian", "American Indian or Alaska Native", "Hispanic or Latino", "Jewish", "Arab"))) +
+ggplot(all_data %>% filter(key %in% c("Black or African American", "White", "Asian", "American Indian or Alaska Native", "Hispanic or Latino", "Jewish", "Arab", "Native Hawaiian or Other Pacific Islander"))) +
     geom_line(aes(x=year, y=relative_risk_rate, col=key, group=key, linetype=key)) + 
     theme_bw() + 
     xlab("Year") + 
@@ -119,13 +140,27 @@ ggplot(all_data %>% filter(key %in% c("Gay (Male)","Lesbian (Female)", "Transgen
     ylab("Relative Likelihood") + 
     ggtitle("Relative Likelihood of Experiencing a Hate Crime in the US, by Sexual Orientation / Gender Identity") + 
     scale_x_continuous(breaks=seq(2010,2020,2))
+```
+
+The above graphs show changes in relative risk fraction over the last decade within the US, grouped by a) race or ethnicity; b) religion; c) gender identity or sexual orientation. 
+
+Below are the same data tabulated and ordered in descending order of relative risk rate, taken as decadal averages from the period 2011 to 2020. 
+
+``` {r, echo=FALSE, message=FALSE}
+# Start a new code block to change printing rules for table
 
 # Decadal Averages
 decadal_averages <- all_data %>%
-  group_by(key) %>%
-  summarize(total_crimes = sum(crimes),
-            population = median(population)) %>%
-  mutate(crimes_per_capita = total_crimes / population)
+    group_by(key) %>%
+    summarize(total_crimes = sum(crimes),
+              population = median(population)) %>%
+    mutate(crimes_per_capita = total_crimes / population,
+           crime_fraction = total_crimes / sum(total_crimes)) %>%
+    mutate(relative_risk_rate = crime_fraction / (population / overall_population)) %>% 
+    arrange(-relative_risk_rate)
 
+names(decadal_averages) <- c("Demographic Group", "Total Hate Crimes", "Population", "Crimes Per Capita", "Fraction of All Crimes", "Relative Risk Rate")
+
+decadal_averages %>% kbl() %>% kable_styling()
 
 ```
