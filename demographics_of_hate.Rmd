@@ -117,34 +117,44 @@ all_data <- all_data %>%
   mutate(relative_risk_rate = crime_fraction / (population / overall_population)) %>%
   mutate(key = substr(key,6,length(key)))
 
-ggplot(all_data %>% filter(key %in% c("Black or African American", "White", "Asian", "American Indian or Alaska Native", "Hispanic or Latino", "Jewish", "Arab", "Native Hawaiian or Other Pacific Islander"))) +
+# Plot risk over time by racial or ethnic group
+race_ethnicity_risk_plot <- ggplot(all_data %>% filter(key %in% c("Black or African American", "White", "Asian", "American Indian or Alaska Native", "Hispanic or Latino", "Jewish", "Arab", "Native Hawaiian or Other Pacific Islander"))) +
     geom_line(aes(x=year, y=relative_risk_rate, col=key, group=key, linetype=key)) + 
     theme_bw() + 
     xlab("Year") + 
     ylab("Relative Likelihood") + 
     ggtitle("Relative Likelihood of Experiencing a Hate Crime in the US, by Race or Ethnicity") + 
     scale_x_continuous(breaks=seq(2010,2020,2))
-    
-ggplot(all_data %>% filter(key %in% c("Catholic","Protestant","Jewish","Islamic (Muslim)","Hindu","Sikh","Mormon","Atheism/Agnosticism","Buddhist","Eastern Orthodox (Russian, Greek, Other)"))) +
+race_ethnicity_risk_plot
+ggsave(here::here("images","risk_by_race_ethnicity.png"),race_ethnicity_risk_plot)
+
+# Plot risk over time by religious group
+religion_risk_plot <- ggplot(all_data %>% filter(key %in% c("Catholic","Protestant","Jewish","Islamic (Muslim)","Hindu","Sikh","Mormon","Atheism/Agnosticism","Buddhist","Eastern Orthodox (Russian, Greek, Other)"))) +
     geom_line(aes(x=year, y=relative_risk_rate, col=key, group=key, linetype=key)) + 
     theme_bw() + 
     xlab("Year") + 
     ylab("Relative Likelihood") + 
     ggtitle("Relative Likelihood of Experiencing a Hate Crime in the US, By Religion") + 
     scale_x_continuous(breaks=seq(2010,2020,2))
-    
-ggplot(all_data %>% filter(key %in% c("Gay (Male)","Lesbian (Female)", "Transgender"))) +
+religion_risk_plot
+ggsave(here::here("images","religion_risk_plot.png"),religion_risk_plot)
+
+# Plot risk over time by gender or sexual orientation    
+gender_sexuality_risk_plot <- ggplot(all_data %>% filter(key %in% c("Gay (Male)","Lesbian (Female)", "Transgender"))) +
     geom_line(aes(x=year, y=relative_risk_rate, col=key, group=key)) + 
     theme_bw() + 
     xlab("Year") + 
     ylab("Relative Likelihood") + 
     ggtitle("Relative Likelihood of Experiencing a Hate Crime in the US, by Sexual Orientation / Gender Identity") + 
     scale_x_continuous(breaks=seq(2010,2020,2))
+gender_sexuality_risk_plot
+ggsave(here::here("images","gender_sexuality_risk_plot.png"),gender_sexuality_risk_plot)
+
 ```
 
 The above graphs show changes in relative risk fraction over the last decade within the US, grouped by a) race or ethnicity; b) religion; c) gender identity or sexual orientation. 
 
-Below are the same data tabulated and ordered in descending order of relative risk rate, taken as decadal averages from the period 2011 to 2020. 
+Below are the same data tabulated and ordered in descending order of relative risk rate, taken as decadal averages from the period 2011 to 2020. Risk rates lower than one indicate a population is at less risk than the average in the US, whereas rates higher than one indicate higher risk.
 
 ``` {r, echo=FALSE, message=FALSE}
 # Start a new code block to change printing rules for table
