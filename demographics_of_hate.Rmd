@@ -1,0 +1,131 @@
+---
+title: "Demographics of Hate"
+author: "Conor McMahon"
+date: "8/31/2021"
+output: html_document
+---
+
+```{r setup, echo=FALSE, message=FALSE, results='hide'}
+knitr::opts_chunk$set(fig.width = 10, fig.height = 6)
+library(tidyverse)
+library(janitor)
+library(ggplot2)
+
+```
+
+
+This package runs some basic demographic statistics using the FBI's annual report on hate crimes in the United States. Reports from 2017-2020 are aggregated here. 
+
+# Data Sources
+
+Hate crime rates are tracked by the FBI. The FBI figures include only crimes which were self-reported by law enforcement departments around the US to the FBI. All federal law enforcement groups are required to report hate crimes, but state and local groups have variable policies. Additionally, hate crimes are only reported if the case is tried as a hate crime, which is likely to vary based on social context both in terms of the region in which the crime occurred and the category targeted by the hate attack. 
+
+- Hate crime reports are from a database of [annual FBI reports](https://crime-data-explorer.fr.cloud.gov/pages/home)
+
+Population statistics came from several different sources. The US Census Bureau was used where possible, but the Census primarily tracks sex and race/ethnicity and does not have much data on religion, gender identity, or sexual orientation. 
+
+- Racial population estimates are from the US [Census](https://www.census.gov/quickfacts/fact/table/US/PST045219)
+- Religious afiliation population estimates are from the [Pew Research Center](https://www.pewforum.org/religious-landscape-study)
+
+Several groups are not covered by the above resources. 
+
+- I took an estimate of 700,000 Sikhs in the United States from the [Sikh American Legal Defense Fund](http://saldef.org/archive/learn-about-sikhs/#.WaR7qyiGOM9)
+
+All population estimates were taken as a single baseline, under the assumption that the overall fraction of the country made up of each group changed little in this 10-year tracking period. This is a BAD ASSUMPTION for some groups, but the population data I have access to don't support a higher-resolution analysis. I've tried to help correct for changing population by focusing not on per-capita rates of hate crimes but on the relative risk of crime compared to the risk experienced by the population at large. This statistic is unaffected by changes in population if all groups change in population in similar ways. 
+
+
+
+``` {r, echo=FALSE, message=FALSE, results='hide'}
+
+# Load Population Data
+populations <- read_csv(here::here("data","us_pop_stats.csv")) %>%
+  janitor::clean_names()
+  
+# Load Data on Hate
+data_2011 <- read_csv(here::here("data","2011.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(year=rep(2011,n()))
+data_2012 <- read_csv(here::here("data","2012.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(year=rep(2012,n()))
+data_2013 <- read_csv(here::here("data","2013.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(year=rep(2013,n()))
+data_2014 <- read_csv(here::here("data","2014.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(year=rep(2014,n()))
+data_2015 <- read_csv(here::here("data","2015.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(year=rep(2015,n()))
+data_2016 <- read_csv(here::here("data","2016.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(year=rep(2016,n()))
+data_2017 <- read_csv(here::here("data","2017.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(year=rep(2017,n()))
+data_2018 <- read_csv(here::here("data","2018.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(year=rep(2018,n()))
+data_2019 <- read_csv(here::here("data","2019.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(year=rep(2019,n()))
+data_2020 <- read_csv(here::here("data","2020.csv")) %>%
+  janitor::clean_names() %>%
+  mutate(year=rep(2020,n()))
+  
+# Merge Data
+all_data <- rbind(data_2011,data_2012,data_2013,data_2014,data_2015,data_2016,data_2017,data_2018,data_2019,data_2020) %>%
+  merge(populations, by.x="key")
+names(all_data) <- c("key","crimes","year","population")
+  
+overall_population <- populations[populations$key=="Total Population",]$population
+# Annual overall rate of hate crimes
+total_crimes_by_year <- all_data %>% 
+  group_by(year) %>%
+  summarize(annual_total = sum(crimes))
+  
+# Add data on total crimes per year, fraction of annual crimes by category, etc.
+all_data <- all_data %>%
+  merge(total_crimes_by_year, by="year") %>%
+  drop_na()
+
+# Estimate per-capita statistics and annual rate of risk vs. entire country
+all_data <- all_data %>%
+  mutate(crimes_per_capita = crimes / population,
+         crime_fraction = crimes / annual_total) %>%
+  mutate(relative_risk_rate = crime_fraction / (population / overall_population)) %>%
+  mutate(key = substr(key,6,length(key)))
+
+ggplot(all_data %>% filter(key %in% c("Black or African American", "White", "Asian", "American Indian or Alaska Native", "Hispanic or Latino", "Jewish", "Arab"))) +
+    geom_line(aes(x=year, y=relative_risk_rate, col=key, group=key, linetype=key)) + 
+    theme_bw() + 
+    xlab("Year") + 
+    ylab("Relative Likelihood") + 
+    ggtitle("Relative Likelihood of Experiencing a Hate Crime in the US, by Race or Ethnicity") + 
+    scale_x_continuous(breaks=seq(2010,2020,2))
+    
+ggplot(all_data %>% filter(key %in% c("Catholic","Protestant","Jewish","Islamic (Muslim)","Hindu","Sikh","Mormon","Atheism/Agnosticism","Buddhist","Eastern Orthodox (Russian, Greek, Other)"))) +
+    geom_line(aes(x=year, y=relative_risk_rate, col=key, group=key, linetype=key)) + 
+    theme_bw() + 
+    xlab("Year") + 
+    ylab("Relative Likelihood") + 
+    ggtitle("Relative Likelihood of Experiencing a Hate Crime in the US, By Religion") + 
+    scale_x_continuous(breaks=seq(2010,2020,2))
+    
+ggplot(all_data %>% filter(key %in% c("Gay (Male)","Lesbian (Female)", "Transgender"))) +
+    geom_line(aes(x=year, y=relative_risk_rate, col=key, group=key)) + 
+    theme_bw() + 
+    xlab("Year") + 
+    ylab("Relative Likelihood") + 
+    ggtitle("Relative Likelihood of Experiencing a Hate Crime in the US, by Sexual Orientation / Gender Identity") + 
+    scale_x_continuous(breaks=seq(2010,2020,2))
+
+# Decadal Averages
+decadal_averages <- all_data %>%
+  group_by(key) %>%
+  summarize(total_crimes = sum(crimes),
+            population = median(population)) %>%
+  mutate(crimes_per_capita = total_crimes / population)
+
+
+```
